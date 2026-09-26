@@ -192,14 +192,17 @@ const filters = {
         xs: xs,
         ys: mapNumbers(ys, (y, i) => {
           const x = +xs[i];
+          let intervalStart = last.x;
           if (reset_every > 0) {
             const laps = Math.floor((x - t0) / reset_every);
             if (laps !== last.laps) {
               yAcc = 0;
               last.laps = laps;
+              // only the part after the reset belongs to the new period
+              intervalStart = Math.max(intervalStart, t0 + laps * reset_every);
             }
           }
-          const dateDelta = (x - last.x) / timeUnits[unit];
+          const dateDelta = (x - intervalStart) / timeUnits[unit];
           const isFirst = isNaN(last.x);
           last.x = x;
           if (isFirst) {

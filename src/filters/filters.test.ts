@@ -124,16 +124,67 @@ describe("filters", () => {
         ys: [NaN, 2, 4],
       });
     });
-    it("reset_every restarts at local midnight", () => {
-      jest.useFakeTimers({ now: new Date(2022, 11, 21, 12) });
-      const xs = [22, 23, 24, 25].map((h) => new Date(2022, 11, 20, h));
-      const integrate = filters.integrate({ unit: "h", reset_every: "1d" });
-      expect(integrate(input({ xs, ys: [1, 1, 1, 1] })).ys).toEqual([
-        NaN,
-        1,
-        1,
-        2,
-      ]);
+    it("handles nonuniform intervals", () => {
+      const xs = [0, 1, 3, 6].map(
+        (s) => new Date(Date.UTC(2022, 11, 20, 0, 0, s)),
+      );
+      expect(
+        filters.integrate("s")(input({ xs, ys: [1, 2, 3, 4] })).ys,
+      ).toEqual([NaN, 1, 5, 14]);
+    });
+
+    describe("reset_every", () => {
+      // Resets are aligned to local midnight of the current day. The clock has
+      // nonzero milliseconds, which must not shift the reset boundaries.
+      beforeEach(() => {
+        jest.useFakeTimers({ now: new Date(2022, 11, 21, 12, 34, 56, 789) });
+      });
+      // local time on December <day> 2022
+      const at = (day: number, hours: number, minutes = 0) =>
+        new Date(2022, 11, day, hours, minutes);
+      const integrate = (
+        param: Parameters<typeof filters.integrate>[0],
+        xs: Date[],
+        ys: any[] = xs.map(() => 1),
+      ) => filters.integrate(param)(input({ xs, ys })).ys;
+      const daily = { unit: "h", reset_every: "1d" } as const;
+
+      it("restarts at local midnight", () => {
+        const xs = [at(20, 22), at(20, 23), at(21, 0), at(21, 1)];
+        expect(integrate(daily, xs)).toEqual([NaN, 1, 0, 1]);
+      });
+      it("only counts the part of an interval after midnight", () => {
+        const xs = [at(20, 23, 30), at(21, 0, 30), at(21, 1, 30)];
+        expect(integrate(daily, xs)).toEqual([NaN, 0.5, 1.5]);
+      });
+      it("skips periods without samples", () => {
+        const xs = [at(18, 23), at(20, 1), at(20, 2)];
+        expect(integrate(daily, xs)).toEqual([NaN, 1, 2]);
+      });
+      it("shifts the reset by offset", () => {
+        const xs = [at(20, 5), at(20, 7), at(20, 8)];
+        expect(integrate(daily, xs)).toEqual([NaN, 2, 3]);
+        expect(integrate({ ...daily, offset: "6h" }, xs)).toEqual([NaN, 1, 2]);
+      });
+      it("resets every hour", () => {
+        const xs = [at(20, 10), at(20, 10, 30), at(20, 11), at(20, 11, 30)];
+        expect(
+          integrate({ unit: "h", reset_every: "1h" }, xs, [2, 2, 2, 2]),
+        ).toEqual([NaN, 1, 0, 1]);
+      });
+      it("resets on the first numeric sample after midnight", () => {
+        const xs = [at(20, 23), at(21, 0), at(21, 1)];
+        expect(integrate(daily, xs, [1, "unavailable", 1])).toEqual([
+          NaN,
+          "unavailable",
+          1,
+        ]);
+      });
+      it("starts integrating at the first sample, not the period start", () => {
+        expect(integrate(daily, [at(20, 12), at(20, 18)])).toEqual([NaN, 6]);
+        // the current period, where no reset is detected on the first sample
+        expect(integrate(daily, [at(21, 8), at(21, 10)])).toEqual([NaN, 2]);
+      });
     });
   });
 
