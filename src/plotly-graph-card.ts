@@ -19,6 +19,7 @@ import { TouchController } from "./touch-controller";
 import { ConfigParser } from "./parse-config/parse-config";
 import { merge } from "lodash";
 import { getFetchMask } from "./plot-state";
+import { parsePlotlyDateString } from "./timezone";
 
 const componentName = isProduction ? "plotly-graph" : "plotly-graph-dev";
 
@@ -142,19 +143,25 @@ export class PlotlyGraph extends HTMLElement {
   }
 
   connectedCallback() {
-    const updateCardSize = async () => {
+    const updateCardSize = () => {
       const width = this.cardEl.offsetWidth;
+      if (width <= 0) return;
       this.contentEl.style.position = "absolute";
       const height = this.cardEl.offsetHeight;
       this.contentEl.style.position = "";
-      this.size = { width };
+      const nextSize: { width: number; height?: number } = { width };
       if (height > 100) {
         // Panel view type has the cards covering 100% of the height of the window.
         // Masonry lets the cards grow by themselves.
         // if height > 100 ==> Panel ==> use available height
         // else ==> Mansonry ==> let the height be determined by defaults
-        this.size.height = height - this.titleEl.offsetHeight;
+        nextSize.height = height - this.titleEl.offsetHeight;
       }
+      if (
+        this.size.width === nextSize.width &&
+        this.size.height === nextSize.height
+      ) return;
+      this.size = nextSize;
       this.plot({ should_fetch: false });
     };
     this.handles.resizeObserver = new ResizeObserver(updateCardSize);
@@ -285,28 +292,37 @@ export class PlotlyGraph extends HTMLElement {
   }
 
   getVisibleRange() {
+    const timeZone = this.configParser.timeZone;
     // TODO: if the x axis is not there, or is not time, don't fetch & replot
     return this.contentEl.layout.xaxis?.range?.map((date) => {
-      // if autoscale is used after scrolling, plotly returns the dates as timestamps (numbers) instead of iso strings
-      if (Number.isFinite(date)) return date;
-      if (date.startsWith("-")) {
-        /*
-         The function parseISO can't handle negative dates.
-         To work around that, I'm parsing it without the minus, and then manually calculating the timestamp from that.
-         The arithmetic has a twist because timestamps start on 1970 and not on year zero,
-         so the distance to a the year zero has to be calculated by subtracting the "zero year" timestamp.
-         positive_date = -date (which is negative)
-         timestamp = (year 0) - (time from year 0)
-         timestamp = (year 0) - (positive_date - year 0)
-         timestamp = 2 * (year 0) - positive_date
-         timestamp = 2 * (year 0) - (-date)
-        */
-        return (
-          2 * +parseISO("0000-01-01 00:00:00.000") - +parseISO(date.slice(1))
-        );
+      if (timeZone && typeof date === "string") {
+        // Plotly was given wall clock times in `timeZone`, not the browser's
+        const timestamp = parsePlotlyDateString(date, timeZone);
+        if (!isNaN(timestamp)) return timestamp;
       }
-      return +parseISO(date);
+      return this.parsePlotlyDate(date);
     });
+  }
+  parsePlotlyDate(date: any): number {
+    // if autoscale is used after scrolling, plotly returns the dates as timestamps (numbers) instead of iso strings
+    if (Number.isFinite(date)) return date;
+    if (date.startsWith("-")) {
+      /*
+       The function parseISO can't handle negative dates.
+       To work around that, I'm parsing it without the minus, and then manually calculating the timestamp from that.
+       The arithmetic has a twist because timestamps start on 1970 and not on year zero,
+       so the distance to a the year zero has to be calculated by subtracting the "zero year" timestamp.
+       positive_date = -date (which is negative)
+       timestamp = (year 0) - (time from year 0)
+       timestamp = (year 0) - (positive_date - year 0)
+       timestamp = 2 * (year 0) - positive_date
+       timestamp = 2 * (year 0) - (-date)
+      */
+      return (
+        2 * +parseISO("0000-01-01 00:00:00.000") - +parseISO(date.slice(1))
+      );
+    }
+    return +parseISO(date);
   }
   enterBrowsingMode = () => {
     this.isBrowsing = true;

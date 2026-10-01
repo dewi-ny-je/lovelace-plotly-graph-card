@@ -14,6 +14,7 @@
     "test:cache": "jest --runInBand src/cache/Cache.test.ts src/cache/date-ranges.test.ts src/cache/observed-range.test.ts src/parse-config/cache-retention.test.ts",
     "test:statistics": "jest --runInBand src/cache/fetch-statistics.test.ts src/cache/statistics-cache.test.ts src/cache/date-ranges.test.ts src/parse-config/parse-config.test.ts",
     "test:browser": "node script/test-plotly-browser.mjs",
+    "test:resize": "node script/test-resize.mjs",
     "test:card-lifecycle": "node script/test-card-lifecycle.mjs",
     "test:watch": "jest --watchAll",
     "version": "npm run build && git add .",
@@ -33,10 +34,11 @@
     "ws": "^8.12.0"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
     "binary-search-bounds": "^2.0.5",
     "buffer": "^6.0.3",
     "custom-card-helpers": "^1.9.0",
-    "date-fns": "^2.29.3",
+    "date-fns": "^4.4.0",
     "deepmerge": "^4.2.2",
     "fourier-transform": "^1.1.2",
     "lodash": "^4.17.21",

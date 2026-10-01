@@ -1090,6 +1090,18 @@ config:
 
 When using `hours_to_show: current_week`, the "First day of the week" configured in Home Assistant is used
 
+## time_zone:
+
+Dates are shown in the "Time zone" chosen in the Home Assistant user profile (your browser's or the server's), but it can be overridden like this:
+
+```yaml
+time_zone: server # Home Assistant's timezone
+time_zone: local # the browser's timezone
+time_zone: Europe/Rome # any IANA timezone
+```
+
+This also applies to the boundaries of `hours_to_show: current_day` and friends, and to `integrate`'s `reset_every`.
+
 ## Presets
 
 If you find yourself reusing the same card configuration frequently, you can save it as a preset.
@@ -1364,12 +1376,16 @@ the compatibility checks. For rendering checks, install Chromium with
 `npx playwright install chromium` and run `npm run test:browser`.
 The browser test covers every registered trace type, tank shapes and labels,
 axis defaults, cloud-upload opt-in, and a card with a mock Home Assistant state.
+`npm test` includes history batching, compressed WebSocket responses, cache reuse,
+attributes, time offsets and request failure recovery.
 The five additional trace types are also validated and rendered through the card.
 Run `npm run test:card-lifecycle` to check initial rendering, recovery from
 render failures, event suppression, listener cleanup on reconnect, and mouse
 interactions with data points, legend toggles and the reset button.
 Run `npm run test:statistics` for statistics batching, cache reuse, period and
 time-offset separation, dynamic settings and fallback after failed requests.
+Run `npm run test:resize` for unchanged-size callbacks, hidden cards and normal
+width changes. These tests do not run Home Assistant's view components.
 Run `npm run test:cache` for rolling-window retention, boundary values,
 time offsets, browsing, refetching pruned history and in-flight live updates.
 
