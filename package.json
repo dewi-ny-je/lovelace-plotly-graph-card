@@ -7,8 +7,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "start": "(node ./script/hot-reload.mjs & esbuild src/plotly-graph-card.ts --servedir=dist --outdir=dist --bundle --sourcemap=inline)",
-    "build": "esbuild src/plotly-graph-card.ts --outdir=dist --bundle --minify",
+    "start": "(node ./script/hot-reload.mjs & esbuild src/plotly-graph-card.ts --servedir=dist --outdir=dist --bundle --sourcemap=inline --loader:.css=empty)",
+    "build": "esbuild src/plotly-graph-card.ts --outdir=dist --bundle --minify --loader:.css=empty",
     "tsc": "tsc",
     "test": "jest",
     "test:cache": "jest --runInBand src/cache/Cache.test.ts src/cache/date-ranges.test.ts src/cache/observed-range.test.ts src/parse-config/cache-retention.test.ts",
