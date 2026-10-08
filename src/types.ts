@@ -42,6 +42,12 @@ export type InputEntityOptions = {
   on_click?: Function;
 };
 
+export type TouchGestures = {
+  pinch_to_zoom: boolean;
+  double_tap_drag_to_zoom: boolean;
+  hold_to_scan: boolean;
+};
+
 export type InputConfig = {
   type: "custom:plotly-graph";
   /**
@@ -62,6 +68,14 @@ export type InputConfig = {
   refresh_interval?: number | "auto"; // in seconds
   color_scheme?: ColorSchemeNames | ColorSchemeArray | number;
   title?: string;
+  /** Main y-axis minimum in data units, set by the visual editor. */
+  min_y_axis?: number;
+  /** Main y-axis maximum in data units, set by the visual editor. */
+  max_y_axis?: number;
+  /** Expand the main y-axis to include both data and editor bounds. */
+  fit_y_data?: boolean;
+  /** Use a logarithmic main y-axis unless a Plotly axis type is specified. */
+  logarithmic_scale?: boolean;
   offset?: TimeDurationStr;
   entities: (InputEntityOptions & Partial<Plotly.Data>)[];
   defaults?: {
@@ -76,9 +90,16 @@ export type InputConfig = {
   raw_plotly_config?: boolean;
   significant_changes_only?: boolean; // defaults to false
   minimal_response?: boolean; // defaults to true
-  disable_pinch_to_zoom?: boolean; // defaults to false
+  extended_touch_support?: boolean | Partial<TouchGestures>; // defaults to true
+  disable_pinch_to_zoom?: boolean; // old, same as extended_touch_support: false
   autorange_after_scroll?: boolean; // defaults to false
   preset?: string | string[];
+  /**
+   * Timezone the x axis is drawn in: "local" (the browser's), "server"
+   * (Home Assistant's), or an IANA name like "Europe/Rome".
+   * Defaults to the Home Assistant user profile setting.
+   */
+  time_zone?: "local" | "server" | string;
 };
 
 export type EntityConfig = EntityIdConfig & {
@@ -99,7 +120,15 @@ export type EntityConfig = EntityIdConfig & {
 
 export type Config = {
   title?: string;
+  min_y_axis?: number;
+  max_y_axis?: number;
+  fit_y_data?: boolean;
+  logarithmic_scale?: boolean;
   hours_to_show: number;
+  editor_y_axis?: {
+    partial_bound?: boolean;
+    log_fit_bounds?: [number | null, number | null];
+  };
   refresh_interval: number | "auto"; // in seconds
   offset: number;
   entities: EntityConfig[];
@@ -109,10 +138,12 @@ export type Config = {
   raw_plotly_config: boolean;
   significant_changes_only: boolean;
   minimal_response: boolean;
+  extended_touch_support?: boolean | Partial<TouchGestures>;
   disable_pinch_to_zoom: boolean;
   visible_range: [number, number];
   on_dblclick: Function;
   autorange_after_scroll: boolean;
+  time_zone?: "local" | "server" | string;
 };
 export type EntityIdStateConfig = {
   entity: string;
